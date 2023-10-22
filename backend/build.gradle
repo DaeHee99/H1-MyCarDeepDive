@@ -1,0 +1,241 @@
+buildscript {
+	ext {
+		queryDslVersion = "5.0.0"
+		restdocsApiSpecVersion = '0.16.2'
+		mapStructVersion = "1.4.2.Final"
+	}
+}
+
+plugins {
+	id 'java'
+	id 'jacoco'
+	id 'org.springframework.boot' version '2.7.1'
+	id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+	id "com.ewerk.gradle.plugins.querydsl" version "1.0.10"
+	id "com.diffplug.spotless" version '6.10.0'
+	id 'com.epages.restdocs-api-spec' version "${restdocsApiSpecVersion}"
+	id 'org.hidetake.swagger.generator' version '2.18.2'
+}
+
+group = 'com.h1'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '11'
+
+repositories {
+	mavenCentral()
+}
+
+dependencyManagement {
+	imports {
+		mavenBom "io.awspring.cloud:spring-cloud-aws-dependencies:2.3.3"
+	}
+}
+
+allprojects {
+	repositories {
+		maven { url 'https://jitpack.io' }
+	}
+	afterEvaluate {
+		def spotless = tasks.findByName('spotlessApply')
+		if (spotless) {
+			tasks.withType(JavaCompile) {
+				finalizedBy(spotless)
+			}
+		}
+	}
+}
+
+test {
+	useJUnitPlatform()
+	finalizedBy 'jacocoTestReport'
+}
+
+jacoco {
+	toolVersion = '0.8.8'
+}
+
+jacocoTestReport {
+	reports {
+		html.required.set(true)
+		xml.required.set(true)
+	}
+	def Qdomains = []
+	for(qPattern in "**/QA" .. "**/QZ"){
+		Qdomains.add(qPattern+"*")
+	}
+
+	afterEvaluate {
+		classDirectories.setFrom(files(classDirectories.files.collect {
+			fileTree(dir: it,
+					exclude: [] + Qdomains)
+		}))
+	}
+	finalizedBy 'jacocoTestCoverageVerification'
+}
+
+jacocoTestCoverageVerification {
+	def Qdomains = []
+	for (qPattern in '*.QA'..'*.QZ') {
+		Qdomains.add(qPattern + '*')
+	}
+
+	violationRules {
+		rule {
+			limit {
+				counter = 'LINE'
+				value = 'COVEREDRATIO'
+				minimum = 0.00
+			}
+
+			excludes = [
+			] + Qdomains
+		}
+	}
+}
+
+tasks.jar {
+	enabled = false
+}
+
+dependencies {
+	// Spring
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+	// Batch&Scheduler
+	implementation 'org.springframework.boot:spring-boot-starter-batch'
+	implementation 'org.springframework.boot:spring-boot-starter-quartz'
+
+	// Monitoring
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'io.micrometer:micrometer-core'
+	implementation 'io.micrometer:micrometer-registry-prometheus'
+
+	// Database
+	runtimeOnly 'com.h2database:h2:1.4.199'
+	runtimeOnly 'mysql:mysql-connector-java'
+	implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+
+	// Cloud
+	implementation group: 'io.awspring.cloud', name: 'spring-cloud-starter-aws-parameter-store-config'
+
+	// QueryDsl
+	implementation 'com.querydsl:querydsl-jpa'
+	implementation "com.querydsl:querydsl-jpa:${queryDslVersion}"
+	implementation "com.querydsl:querydsl-apt:${queryDslVersion}"
+
+	// Lombok
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+
+	// Mapstruct
+	annotationProcessor "org.mapstruct:mapstruct-processor:${mapStructVersion}"
+	implementation "org.mapstruct:mapstruct:${mapStructVersion}"
+
+	// Test
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+	// String-Utils
+	implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.12.0'
+
+	// Slack
+	implementation 'com.github.maricn:logback-slack-appender:1.6.1'
+
+	// Flyway
+	implementation 'org.flywaydb:flyway-core:6.4.2'
+
+	// Swagger
+	implementation "org.springdoc:springdoc-openapi-ui:1.6.11"
+
+	// RestDocs
+	testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
+	testImplementation "com.epages:restdocs-api-spec-mockmvc:${restdocsApiSpecVersion}"
+
+	// Mail
+	implementation 'org.springframework.boot:spring-boot-starter-mail'
+
+	// PDF
+	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+	implementation 'nz.net.ultraq.thymeleaf:thymeleaf-layout-dialect'
+	implementation 'org.xhtmlrenderer:flying-saucer-pdf-itext5:9.1.22'
+	implementation 'com.itextpdf:itextpdf:5.5.13'
+	implementation 'org.springframework:spring-test'
+
+	// logstash logback encoder
+	implementation 'net.logstash.logback:logstash-logback-encoder:7.2'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+tasks.withType(GenerateSwaggerUI) {
+	dependsOn 'openapi3'
+
+	delete file('src/main/resources/static/docs/')
+	copy {
+		from "build/resources/main/static/docs"
+		into "src/main/resources/static/docs/"
+
+	}
+}
+
+bootJar {
+	dependsOn(':openapi3')
+}
+
+openapi3 {
+	server = "https://api.make-my-car.shop"
+	title = "MyCarDeepDive API Documentation"
+	description = "API documentation of MyCarDeepDive project by Team H1"
+	version = "0.0.1"
+	outputFileNamePrefix = 'open-api-3.0.1'
+	format = 'json'
+
+	outputDirectory = 'build/resources/main/static/docs'
+}
+
+def querydslDir = "$buildDir/generated/querydsl"
+
+querydsl {
+	jpa = true
+	querydslSourcesDir = querydslDir
+}
+
+sourceSets {
+	main.java.srcDir querydslDir
+}
+
+compileQuerydsl {
+	options.annotationProcessorPath = configurations.querydsl
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+	querydsl.extendsFrom compileClasspath
+}
+
+
+spotless {
+	ratchetFrom 'origin/be-main'
+
+	format 'misc', {
+		target '*.gradle', '*.md', '.gitignore'
+
+		trimTrailingWhitespace()
+		indentWithTabs()
+		endWithNewline()
+	}
+	java {
+		// google-java-format
+		googleJavaFormat('1.15.0').aosp().reflowLongStrings(false)
+	}
+}
+
+spotlessJava {
+	dependsOn 'compileQuerydsl'
+}

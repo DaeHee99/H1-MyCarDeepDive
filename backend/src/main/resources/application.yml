@@ -1,0 +1,246 @@
+spring:
+  profiles:
+    active: local
+  application:
+    name: mycardeepdive
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+  batch:
+    jdbc:
+      initialize-schema: always
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus
+  metrics:
+    tags:
+      application: mycardeepdive
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+    import: 'aws-parameterstore:'
+  jpa:
+    hibernate:
+      ddl-auto: ${jpa.ddl_auto}
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
+    show-sql: true
+  datasource:
+    master:
+      username: sa
+      password:
+      driver-class-name: org.h2.Driver
+      jdbc-url: jdbc:h2:mem:mycardeepdive;MODE=MYSQL
+    slave:
+      username: sa
+      password:
+      driver-class-name: org.h2.Driver
+      jdbc-url: jdbc:h2:mem:mycardeepdive;MODE=MYSQL
+  flyway:
+    enabled: false
+  mail:
+    host: smtp.naver.com
+    port: 465
+    username: ${naver.email}
+    password: ${naver.password}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.ssl.enable: true
+      mail.smtp.ssl.trust: smtp.naver.com
+      mail.smtp.starttls.enable: true
+  data:
+    mongodb:
+      uri: ${mongo.url}
+cloud:
+  aws:
+    credentials:
+      access-key: ${s3.credentials.accesskey}
+      secret-key: ${s3.credentials.secretkey}
+      instanceProfile: true
+    s3:
+      bucket: ${s3.bucket}
+    region:
+      static: ${s3.region}
+      auto: false
+    stack:
+      auto: false
+aws:
+  paramstore:
+    enabled: true
+    prefix: /config
+    profile-separator: _
+    name: mycardeepdive
+logging:
+  slack:
+    webhook-error-uri: ${slack-error-uri}
+    webhook-log-uri: ${slack-log-uri}
+  config: classpath:logback-spring.xml
+springdoc:
+  default-consumes-media-type: application/json;charset=UTF-8
+  default-produces-media-type: application/json;charset=UTF-8
+  swagger-ui:
+    url: /docs/open-api-3.0.1.json
+    path: /docs/swagger
+server:
+  port: ${server.port}
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+    import: 'aws-parameterstore:'
+  jpa:
+    hibernate:
+      ddl-auto: ${jpa.ddl_auto}
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQL8Dialect
+    show-sql: true
+  datasource:
+    master:
+      username: ${master.username}
+      password: ${master.password}
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      jdbc-url: ${master.jdbc-url}
+    slave:
+      username: ${slave.username}
+      password: ${slave.password}
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      jdbc-url: ${slave.jdbc-url}
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    url: ${master.jdbc-url}
+    user: ${master.username}
+    password: ${master.password}
+  mail:
+    host: smtp.naver.com
+    port: 465
+    username: ${naver.email}
+    password: ${naver.password}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.ssl.enable: true
+      mail.smtp.ssl.trust: smtp.naver.com
+      mail.smtp.starttls.enable: true
+  data:
+    mongodb:
+      uri: ${mongo.url}
+  sql:
+    init:
+      mode: always
+cloud:
+  aws:
+    credentials:
+      access-key: ${s3.credentials.accesskey}
+      secret-key: ${s3.credentials.secretkey}
+      instanceProfile: true
+    s3:
+      bucket: ${s3.bucket}
+    region:
+      static: ${s3.region}
+      auto: false
+    stack:
+      auto: false
+aws:
+  paramstore:
+    enabled: true
+    prefix: /config
+    profile-separator: _
+    name: mycardeepdive
+logging:
+  slack:
+    webhook-error-uri: ${slack-error-uri}
+    webhook-log-uri: ${slack-log-uri}
+  config: classpath:logback-spring.xml
+springdoc:
+  default-consumes-media-type: application/json;charset=UTF-8
+  default-produces-media-type: application/json;charset=UTF-8
+  swagger-ui:
+    url: /docs/open-api-3.0.1.json
+    path: /docs/swagger
+server:
+  port: ${server.port}
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+    import: 'aws-parameterstore:'
+  jpa:
+    hibernate:
+      ddl-auto: ${jpa.ddl_auto}
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQL8Dialect
+    show-sql: true
+  datasource:
+    master:
+      username: ${master.username}
+      password: ${master.password}
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      jdbc-url: ${master.jdbc-url}
+    slave:
+      username: ${slave.username}
+      password: ${slave.password}
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      jdbc-url: ${slave.jdbc-url}
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    url: ${master.jdbc-url}
+    user: ${master.username}
+    password: ${master.password}
+  mail:
+    host: smtp.naver.com
+    port: 465
+    username: ${naver.email}
+    password: ${naver.password}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.ssl.enable: true
+      mail.smtp.ssl.trust: smtp.naver.com
+      mail.smtp.starttls.enable: true
+  data:
+    mongodb:
+      uri: ${mongo.url}
+cloud:
+  aws:
+    credentials:
+      access-key: ${s3.credentials.accesskey}
+      secret-key: ${s3.credentials.secretkey}
+      instanceProfile: true
+    s3:
+      bucket: ${s3.bucket}
+    region:
+      static: ${s3.region}
+      auto: false
+    stack:
+      auto: false
+aws:
+  paramstore:
+    enabled: true
+    prefix: /config
+    profile-separator: _
+    name: mycardeepdive
+logging:
+  slack:
+    webhook-error-uri: ${slack-error-uri}
+    webhook-log-uri: ${slack-log-uri}
+  config: classpath:logback-spring.xml
+springdoc:
+  default-consumes-media-type: application/json;charset=UTF-8
+  default-produces-media-type: application/json;charset=UTF-8
+  swagger-ui:
+    url: /docs/open-api-3.0.1.json
+    path: /docs/swagger
+server:
+  port: ${server.port}
